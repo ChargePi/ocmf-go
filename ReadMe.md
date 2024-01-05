@@ -7,7 +7,7 @@ with the provided private key, desired algorithm and encoding, so you don't have
 ## Installation
 
 ```shell
-go get github.com/ChargePi/OCMF-go
+go get github.com/ChargePi/ocmf-go
 ```
 
 ## Usage
@@ -18,10 +18,8 @@ package main
 import (
 	"fmt"
 
+	ocmf_go "github.com/ChargePi/ocmf-go"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
-	ocmf_go "ocmf-go"
-
-	// ocmf_go "ocmf-go"
 )
 
 func main() {
@@ -29,10 +27,10 @@ func main() {
 	builder := ocmf_go.NewBuilder()
 
 	// Set the signature algorithm
-	builder.SetSignatureAlgorithm(ocmf.SignatureAlgorithmSHA256WithRSA)
+	builder.SetSignatureAlgorithm(ocmf_go.SignatureAlgorithmECDSAsecp256r1Sha256)
 
 	// Set the signature encoding
-	builder.SetSignatureEncoding(ocmf.SignatureEncodingBase64)
+	builder.SetSignatureEncoding(ocmf_go.SignatureEncodingBase64)
 
 	// ... set the desired fields
 	message, err := builder.Build()
@@ -62,4 +60,4 @@ information.
 
 ## License
 
-ChargePi-go is licensed under the [MIT License](LICENSE.txt).
+OCMF-go is licensed under the [MIT License](LICENSE.txt).
