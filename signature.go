@@ -1,12 +1,5 @@
 package ocmf_go
 
-type Signature struct {
-	Algorithm string `json:"SA"`
-	Encoding  string `json:"SE,omitempty"`
-	MimeType  string `json:"SM,omitempty"`
-	Data      string `json:"SD"`
-}
-
 type SignatureMimeType string
 
 const (
@@ -30,3 +23,10 @@ const (
 	SignatureAlgorithmECDSAsecp256r1SHA256       = SignatureAlgorithm("ECDSA-secp256r1-SHA256")
 	SignatureAlgorithmECDSAsecp192r1SHA256       = SignatureAlgorithm("ECDSA-secp192r1-SHA256")
 )
+
+type Signature struct {
+	Algorithm SignatureAlgorithm `json:"SA"`
+	Encoding  SignatureEncoding  `json:"SE,omitempty"`
+	MimeType  SignatureMimeType  `json:"SM,omitempty"`
+	Data      string             `json:"SD" validate:"required"`
+}

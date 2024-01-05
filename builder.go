@@ -3,30 +3,51 @@ package ocmf_go
 import (
 	"crypto"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	"github.com/samber/lo"
 )
 
+type BuilderOption func(*Builder)
+
+func WithSignatureAlgorithm(algorithm SignatureAlgorithm) BuilderOption {
+	return func(b *Builder) {
+		b.signature.Algorithm = algorithm
+	}
+}
+
+func WithSignatureEncoding(encoding SignatureEncoding) BuilderOption {
+	return func(b *Builder) {
+		b.signature.Encoding = encoding
+	}
+}
+
 type Builder struct {
 	payload   PayloadSection
 	signature Signature
 }
 
-func NewBuilder() *Builder {
-	return &Builder{
+func NewBuilder(opts ...BuilderOption) *Builder {
+	builder := &Builder{
+		payload: PayloadSection{
+			FormatVersion: "0.4",
+		},
+		// Set default signature parameters
 		signature: Signature{
-			Algorithm: string(SignatureAlgorithmECDSAsecp256r1SHA256),
-			Encoding:  string(SignatureEncodingHex),
-			MimeType:  string(SignatureMimeTypeDer),
+			Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
+			Encoding:  SignatureEncodingHex,
+			MimeType:  SignatureMimeTypeDer,
 		},
 	}
-}
 
-func (b *Builder) WithFormatVersion(formatVersion string) *Builder {
-	b.payload.FormatVersion = formatVersion
-	return b
+	// Apply builder options
+	for _, option := range opts {
+		option(builder)
+	}
+
+	return builder
 }
 
 func (b *Builder) WithGatewayID(gatewayID string) *Builder {
@@ -49,20 +70,42 @@ func (b *Builder) WithPagination(pagination string) *Builder {
 	return b
 }
 
+func (b *Builder) AddReading(reading Reading) *Builder {
+	b.payload.Readings = append(b.payload.Readings, reading)
+	return b
+}
+
+func (b *Builder) AddFlag(flag string) *Builder {
+	b.payload.IdentificationFlags = append(b.payload.IdentificationFlags, flag)
+	return b
+}
+
+func (b *Builder) AddLossCompensation(lossCompensation LossCompensation) *Builder {
+	b.payload.LossCompensation = lossCompensation
+	return b
+}
+
+func (b *Builder) ClearPayloadSection() *Builder {
+	b.payload = PayloadSection{
+		FormatVersion: "0.4",
+	}
+	return b
+}
+
 // Sign payload
 func (b *Builder) signPayload(privateKey crypto.PrivateKey) {
 	var signedData string
 
 	switch b.signature.Algorithm {
-	case string(SignatureAlgorithmECDSAsecp192k1SHA256):
+	case SignatureAlgorithmECDSAsecp192k1SHA256:
 		// TODO
-	case string(SignatureAlgorithmECDSAsecp256k1SHA256):
+	case SignatureAlgorithmECDSAsecp256k1SHA256:
 		// TODO
-	case string(SignatureAlgorithmECDSAsecp384r1SHA256):
+	case SignatureAlgorithmECDSAsecp384r1SHA256:
 		// TODO
-	case string(SignatureAlgorithmECDSAbrainpool256r11SHA256):
+	case SignatureAlgorithmECDSAbrainpool256r11SHA256:
 		// TODO
-	case string(SignatureAlgorithmECDSAsecp256r1SHA256):
+	case SignatureAlgorithmECDSAsecp256r1SHA256:
 	// TODO
 	default:
 
@@ -70,10 +113,10 @@ func (b *Builder) signPayload(privateKey crypto.PrivateKey) {
 
 	// Encode signed data
 	switch b.signature.Encoding {
-	case string(SignatureEncodingBase64):
+	case SignatureEncodingBase64:
 		signedData = base64.StdEncoding.EncodeToString([]byte(signedData))
 	default:
-		signedData = fmt.Sprintf("%x", signedData)
+		signedData = hex.EncodeToString([]byte(signedData))
 	}
 
 	b.signature.Data = signedData
@@ -81,7 +124,7 @@ func (b *Builder) signPayload(privateKey crypto.PrivateKey) {
 
 // Sign payload
 func (b *Builder) validatePayload() error {
-	return nil
+	return b.payload.Validate()
 }
 
 func (b *Builder) Build(privateKey crypto.PrivateKey) (*string, error) {

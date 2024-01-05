@@ -1,53 +1,5 @@
 package ocmf_go
 
-type PayloadSection struct {
-	// General information
-	FormatVersion  string `json:"FV,omitempty"`
-	GatewayID      string `json:"GI,omitempty"`
-	GatewaySerial  string `json:"GS,omitempty"`
-	GatewayVersion string `json:"GV,omitempty"`
-	// Pagination
-	Pagination string `json:"PG"`
-	// Meter identification
-	MeterVendor   string `json:"MV,omitempty"`
-	MeterModel    string `json:"MM,omitempty"`
-	MeterSerial   string `json:"MS"`
-	MeterFirmware string `json:"MF,omitempty"`
-	// User assignment
-	IdentificationStatus bool     `json:"IS"`
-	IdentificationLevel  string   `json:"IL,omitempty"`
-	IdentificationFlags  []string `json:"IF" validate:"max=4"`
-	IdentificationType   string   `json:"IT"`
-	IdentificationData   string   `json:"ID,omitempty"`
-	TariffText           string   `json:"TT,omitempty"`
-	// EVSE metrologic parameters
-	LossCompensation LossCompensation `json:"LC,omitempty"`
-	// Assignment of the charge point
-	ChargePointIdentificationType string `json:"CT,omitempty"`
-	ChargePointIdentification     string `json:"CI,omitempty"`
-	// Readings
-	Readings []Reading `json:"RD"`
-}
-
-type LossCompensation struct {
-	Naming              string `json:"LN"`
-	Identification      int    `json:"LI"`
-	CableResistance     int    `json:"LR"`
-	CableResistanceUnit int    `json:"LU"`
-}
-
-type Reading struct {
-	Time              string `json:"TM"`
-	Transaction       string `json:"TX,omitempty"`
-	ReadingValue      int    `json:"RV"`
-	ReadingIdentifier string `json:"RI,omitempty"`
-	ReadingUnit       string `json:"RU"`
-	ReadingType       string `json:"RT,omitempty"`
-	CumulatedLoss     int    `json:"CL,omitempty"`
-	ErrorFlags        string `json:"EF,omitempty"`
-	Status            string `json:"ST"`
-}
-
 type MeterError string
 
 const (
@@ -127,3 +79,59 @@ const (
 	CurrentTypeAC = CurrentType("AC")
 	CurrentTypeDC = CurrentType("DC")
 )
+
+type PayloadSection struct {
+	// General information
+	FormatVersion  string `json:"FV,omitempty"`
+	GatewayID      string `json:"GI,omitempty"`
+	GatewaySerial  string `json:"GS,omitempty"`
+	GatewayVersion string `json:"GV,omitempty"`
+	// Pagination
+	Pagination string `json:"PG"`
+	// Meter identification
+	MeterVendor   string `json:"MV,omitempty"`
+	MeterModel    string `json:"MM,omitempty"`
+	MeterSerial   string `json:"MS" validate:"required"`
+	MeterFirmware string `json:"MF,omitempty"`
+	// User assignment
+	IdentificationStatus bool     `json:"IS" validate:"required"`
+	IdentificationLevel  string   `json:"IL,omitempty"`
+	IdentificationFlags  []string `json:"IF" validate:"max=4"`
+	IdentificationType   string   `json:"IT" validate:"required"`
+	IdentificationData   string   `json:"ID,omitempty"`
+	TariffText           string   `json:"TT,omitempty"`
+	// EVSE metrologic parameters
+	LossCompensation LossCompensation `json:"LC,omitempty"`
+	// Assignment of the charge point
+	ChargePointIdentificationType string `json:"CT,omitempty"`
+	ChargePointIdentification     string `json:"CI,omitempty"`
+	// Readings
+	Readings []Reading `json:"RD" validate:"required"`
+}
+
+func (p *PayloadSection) Validate() error {
+	return messageValidator.Struct(p)
+}
+
+type LossCompensation struct {
+	Naming              string `json:"LN"`
+	Identification      int    `json:"LI"`
+	CableResistance     int    `json:"LR"`
+	CableResistanceUnit int    `json:"LU"`
+}
+
+type Reading struct {
+	Time              string `json:"TM"`
+	Transaction       string `json:"TX,omitempty"`
+	ReadingValue      int    `json:"RV" validate:"required"`
+	ReadingIdentifier string `json:"RI,omitempty"`
+	ReadingUnit       string `json:"RU"`
+	ReadingType       string `json:"RT,omitempty"`
+	CumulatedLoss     int    `json:"CL,omitempty"`
+	ErrorFlags        string `json:"EF,omitempty"`
+	Status            string `json:"ST"`
+}
+
+func (r *Reading) Validate() error {
+	return messageValidator.Struct(r)
+}
