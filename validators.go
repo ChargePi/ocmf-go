@@ -6,18 +6,23 @@ var messageValidator = validator.New()
 
 func init() {
 	// Register custom validators for the validator
-	messageValidator.RegisterValidation("meterError", meterErrorValidator)
-	messageValidator.RegisterValidation("userAssignmentState", userAssignmentStateValidator)
-	messageValidator.RegisterValidation("pagination", paginationValidator)
-	messageValidator.RegisterValidation("iso5118State", iso5118StateValidator)
-	messageValidator.RegisterValidation("ocppState", ocppStateValidator)
-	messageValidator.RegisterValidation("rfidState", rfidStateValidator)
-	messageValidator.RegisterValidation("chargePointAssignment", chargePointAssignmentValidator)
-	messageValidator.RegisterValidation("timeStatus", timeStatusValidatorValidator)
-	messageValidator.RegisterValidation("time", timeValidator)
-	messageValidator.RegisterValidation("unit", unitValidator)
-	messageValidator.RegisterValidation("currentType", currentTypeValidator)
+	must(messageValidator.RegisterValidation("meterError", meterErrorValidator))
+	must(messageValidator.RegisterValidation("userAssignmentState", userAssignmentStateValidator))
+	must(messageValidator.RegisterValidation("pagination", paginationValidator))
+	must(messageValidator.RegisterValidation("iso5118State", iso5118StateValidator))
+	must(messageValidator.RegisterValidation("ocppState", ocppStateValidator))
+	must(messageValidator.RegisterValidation("rfidState", rfidStateValidator))
+	must(messageValidator.RegisterValidation("chargePointAssignment", chargePointAssignmentValidator))
+	must(messageValidator.RegisterValidation("timeStatus", timeStatusValidatorValidator))
+	must(messageValidator.RegisterValidation("time", timeValidator))
+	must(messageValidator.RegisterValidation("unit", unitValidator))
+	must(messageValidator.RegisterValidation("currentType", currentTypeValidator))
+}
 
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 func meterErrorValidator(validator.FieldLevel) bool {
