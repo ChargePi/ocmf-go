@@ -1,0 +1,39 @@
+name: "Test"
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.run/**'
+      - 'docs/**'
+      - '*.md'
+
+  pull_request:
+    branches:
+      - main
+    types: [ opened, synchronize ]
+    paths-ignore:
+      - '.run/**'
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  test:
+    name: "Run unit tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "^1.21.1"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Test
+        run: go test --short -v ./...
