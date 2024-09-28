@@ -55,9 +55,9 @@ func isValidSignatureAlgorithm(algorithm SignatureAlgorithm) bool {
 }
 
 type Signature struct {
-	Algorithm SignatureAlgorithm `json:"SA"`
-	Encoding  SignatureEncoding  `json:"SE,omitempty"`
-	MimeType  SignatureMimeType  `json:"SM,omitempty"`
+	Algorithm SignatureAlgorithm `json:"SA" validate:"required,signatureAlgorithm"`
+	Encoding  SignatureEncoding  `json:"SE,omitempty" validate:"required,signatureEncoding"`
+	MimeType  SignatureMimeType  `json:"SM,omitempty" validate:"required,oneof=application/x-der"`
 	Data      string             `json:"SD" validate:"required"`
 }
 
@@ -70,15 +70,7 @@ func NewDefaultSignature() *Signature {
 }
 
 func (s *Signature) Validate() error {
-	if !isValidSignatureAlgorithm(s.Algorithm) {
-		return fmt.Errorf("invalid signature algorithm: %s", s.Algorithm)
-	}
-
-	if !isValidSignatureEncoding(s.Encoding) {
-		return fmt.Errorf("invalid signature encoding: %s", s.Encoding)
-	}
-
-	return nil
+	return signatureValidator.Struct(s)
 }
 
 func (s *Signature) Sign(privateKey crypto.PrivateKey) error {
@@ -103,8 +95,10 @@ func (s *Signature) Sign(privateKey crypto.PrivateKey) error {
 	switch s.Encoding {
 	case SignatureEncodingBase64:
 		signedData = base64.StdEncoding.EncodeToString([]byte(signedData))
-	default:
+	case SignatureEncodingHex:
 		signedData = hex.EncodeToString([]byte(signedData))
+	default:
+		return fmt.Errorf("unsupported signature encoding: %s", s.Encoding)
 	}
 
 	s.Data = signedData
