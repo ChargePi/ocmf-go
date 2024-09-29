@@ -205,6 +205,39 @@ func (s *signatureTestSuite) TestSign() {
 	}
 }
 
+func (s *signatureTestSuite) TestVerify() {
+	tests := []struct {
+		name      string
+		signature Signature
+		publicKey crypto.PublicKey
+		error     bool
+	}{
+		{
+			name: "Valid signature",
+		},
+		{
+			name: "Empty data",
+		},
+		{
+			name: "Wrong private key",
+		},
+		{
+			name: "Tampered data",
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			err := tt.signature.Verify(tt.publicKey)
+			if tt.error {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
 func TestSignature(t *testing.T) {
 	suite.Run(t, new(signatureTestSuite))
 }

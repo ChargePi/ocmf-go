@@ -2,9 +2,13 @@ package ocmf_go
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 )
 
 type SignatureMimeType string
@@ -103,4 +107,53 @@ func (s *Signature) Sign(privateKey crypto.PrivateKey) error {
 
 	s.Data = signedData
 	return nil
+}
+
+func (s *Signature) Verify(publicKey crypto.PublicKey) error {
+	var decoded []byte
+
+	// Decode signed data
+	switch s.Encoding {
+	case SignatureEncodingBase64:
+		_, err := base64.StdEncoding.Decode(decoded, []byte(s.Data))
+		if err != nil {
+			return err
+		}
+	case SignatureEncodingHex:
+		_, err := hex.Decode(decoded, []byte(s.Data))
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported signature encoding: %s", s.Encoding)
+	}
+
+	// Verify signature
+	switch s.Algorithm {
+	case SignatureAlgorithmECDSAsecp192k1SHA256:
+		// TODO
+	case SignatureAlgorithmECDSAsecp256k1SHA256:
+		// TODO
+	case SignatureAlgorithmECDSAsecp384r1SHA256:
+		// TODO
+	case SignatureAlgorithmECDSAbrainpool256r11SHA256:
+		// TODO
+	case SignatureAlgorithmECDSAsecp256r1SHA256:
+	// TODO
+	default:
+		return fmt.Errorf("unsupported signature algorithm: %s", s.Algorithm)
+	}
+
+	return nil
+}
+
+func signECDSAsecp192k1SHA256(privateKey *ecdsa.PrivateKey, data []byte) (r, s *big.Int, err error) {
+	hash := sha256.Sum256(data)
+	r, s, err = ecdsa.Sign(rand.Reader, privateKey, hash[:])
+	return
+}
+
+func verifyECDSAsecp192k1SHA256(publicKey *ecdsa.PublicKey, data []byte, r, s *big.Int) bool {
+	hash := sha256.Sum256(data)
+	return ecdsa.Verify(publicKey, hash[:], r, s)
 }
