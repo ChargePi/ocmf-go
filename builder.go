@@ -2,8 +2,6 @@ package ocmf_go
 
 import (
 	"crypto"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -14,32 +12,34 @@ type BuilderOption func(*Builder)
 
 func WithSignatureAlgorithm(algorithm SignatureAlgorithm) BuilderOption {
 	return func(b *Builder) {
-		b.signature.Algorithm = algorithm
+		if isValidSignatureAlgorithm(algorithm) {
+			b.signature.Algorithm = algorithm
+		}
 	}
 }
 
 func WithSignatureEncoding(encoding SignatureEncoding) BuilderOption {
 	return func(b *Builder) {
-		b.signature.Encoding = encoding
+		if isValidSignatureEncoding(encoding) {
+			b.signature.Encoding = encoding
+		}
 	}
 }
 
 type Builder struct {
-	payload   PayloadSection
-	signature Signature
+	payload    PayloadSection
+	signature  Signature
+	privateKey crypto.PrivateKey
 }
 
-func NewBuilder(opts ...BuilderOption) *Builder {
+func NewBuilder(privateKey crypto.PrivateKey, opts ...BuilderOption) *Builder {
 	builder := &Builder{
 		payload: PayloadSection{
-			FormatVersion: "0.4",
+			FormatVersion: OcmfVersion,
 		},
 		// Set default signature parameters
-		signature: Signature{
-			Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
-			Encoding:  SignatureEncodingHex,
-			MimeType:  SignatureMimeTypeDer,
-		},
+		signature:  *NewDefaultSignature(),
+		privateKey: privateKey,
 	}
 
 	// Apply builder options
@@ -75,8 +75,53 @@ func (b *Builder) AddReading(reading Reading) *Builder {
 	return b
 }
 
-func (b *Builder) AddFlag(flag string) *Builder {
+func (b *Builder) AddIdentificationFlag(flag string) *Builder {
 	b.payload.IdentificationFlags = append(b.payload.IdentificationFlags, flag)
+	return b
+}
+
+func (b *Builder) WithMeterSerial(serial string) *Builder {
+	b.payload.MeterSerial = serial
+	return b
+}
+
+func (b *Builder) WithIdentificationStatus(status bool) *Builder {
+	b.payload.IdentificationStatus = status
+	return b
+}
+
+func (b *Builder) WithIdentificationLevel(level string) *Builder {
+	b.payload.IdentificationLevel = level
+	return b
+}
+
+func (b *Builder) WithIdentificationType(idType string) *Builder {
+	b.payload.IdentificationType = idType
+	return b
+}
+
+func (b *Builder) WithIdentificationData(data string) *Builder {
+	b.payload.IdentificationData = data
+	return b
+}
+
+func (b *Builder) WithTariffText(text string) *Builder {
+	b.payload.TariffText = text
+	return b
+}
+
+func (b *Builder) WithChargeControllerVersion(version string) *Builder {
+	b.payload.ChargeControllerVersion = version
+	return b
+}
+
+func (b *Builder) WithChargePointIdentificationType(serial string) *Builder {
+	b.payload.ChargePointIdentificationType = serial
+	return b
+}
+
+func (b *Builder) WithChargePointIdentification(serial string) *Builder {
+	b.payload.ChargePointIdentification = serial
 	return b
 }
 
@@ -87,62 +132,29 @@ func (b *Builder) AddLossCompensation(lossCompensation LossCompensation) *Builde
 
 func (b *Builder) ClearPayloadSection() *Builder {
 	b.payload = PayloadSection{
-		FormatVersion: "0.4",
+		FormatVersion: OcmfVersion,
 	}
 	return b
 }
 
-// Sign payload
-func (b *Builder) signPayload(privateKey crypto.PrivateKey) {
-	var signedData string
-
-	switch b.signature.Algorithm {
-	case SignatureAlgorithmECDSAsecp192k1SHA256:
-		// TODO
-	case SignatureAlgorithmECDSAsecp256k1SHA256:
-		// TODO
-	case SignatureAlgorithmECDSAsecp384r1SHA256:
-		// TODO
-	case SignatureAlgorithmECDSAbrainpool256r11SHA256:
-		// TODO
-	case SignatureAlgorithmECDSAsecp256r1SHA256:
-	// TODO
-	default:
-
-	}
-
-	// Encode signed data
-	switch b.signature.Encoding {
-	case SignatureEncodingBase64:
-		signedData = base64.StdEncoding.EncodeToString([]byte(signedData))
-	default:
-		signedData = hex.EncodeToString([]byte(signedData))
-	}
-
-	b.signature.Data = signedData
-}
-
-// Sign payload
-func (b *Builder) validatePayload() error {
-	return b.payload.Validate()
-}
-
-func (b *Builder) Build(privateKey crypto.PrivateKey) (*string, error) {
-	err := b.validatePayload()
+func (b *Builder) Build() (*string, error) {
+	// Validate payload
+	err := b.payload.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	// Build payload
+	// Sign payload with private key
+	err = b.signature.Sign(b.privateKey)
+	if err != nil {
+		return nil, err
+	}
+
 	payload, err := json.Marshal(b.payload)
 	if err != nil {
 		return nil, err
 	}
 
-	// Sign payload
-	b.signPayload(privateKey)
-
-	// Build signature
 	signature, err := json.Marshal(b.signature)
 	if err != nil {
 		return nil, err

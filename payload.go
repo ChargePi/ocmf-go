@@ -200,11 +200,11 @@ type PayloadSection struct {
 	MeterSerial   string `json:"MS" validate:"required"`
 	MeterFirmware string `json:"MF,omitempty"`
 	// User assignment
-	IdentificationStatus bool     `json:"IS" validate:"required,"`
+	IdentificationStatus bool     `json:"IS" validate:"required"`
 	IdentificationLevel  string   `json:"IL,omitempty" validate:"omitempty,userAssignmentState"`
 	IdentificationFlags  []string `json:"IF" validate:"omitempty,max=4"`
 	IdentificationType   string   `json:"IT" validate:"required,rfidState"`
-	IdentificationData   string   `json:"ID,omitempty" validate:"omitempty,hex"`
+	IdentificationData   string   `json:"ID,omitempty" validate:"omitempty,hexadecimal"`
 	TariffText           string   `json:"TT,omitempty" validate:"omitempty,max=250"`
 	// EVSE metrologic parameters
 	LossCompensation LossCompensation `json:"LC,omitempty"`
