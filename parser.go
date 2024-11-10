@@ -40,12 +40,13 @@ func NewParser(opts ...Opt) *Parser {
 func (p *Parser) ParseOcmfMessageFromString(data string) *Parser {
 	payloadSection, signature, err := parseOcmfMessageFromString(data)
 	if err != nil {
-		return &Parser{err: err}
+		return &Parser{err: err, withAutomaticValidation: p.withAutomaticValidation}
 	}
 
 	return &Parser{
-		payload:   payloadSection,
-		signature: signature,
+		payload:                 payloadSection,
+		signature:               signature,
+		withAutomaticValidation: p.withAutomaticValidation,
 	}
 }
 
