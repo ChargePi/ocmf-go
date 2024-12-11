@@ -1,14 +1,15 @@
 package ocmf_go
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"math/big"
+
+	"github.com/pkg/errors"
 )
 
 type SignatureMimeType string
@@ -77,30 +78,44 @@ func (s *Signature) Validate() error {
 	return signatureValidator.Struct(s)
 }
 
-func (s *Signature) Sign(privateKey crypto.PrivateKey) error {
-	var signedData string
+func (s *Signature) Sign(payload PayloadSection, privateKey *ecdsa.PrivateKey) error {
+	if privateKey == nil {
+		return errors.New("private key is required")
+	}
+
+	// Marshal payload
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal payload")
+	}
 
 	switch s.Algorithm {
 	case SignatureAlgorithmECDSAsecp192k1SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAsecp256k1SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAsecp384r1SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAbrainpool256r11SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAsecp256r1SHA256:
-	// TODO
 	default:
 		return fmt.Errorf("unsupported signature algorithm: %s", s.Algorithm)
 	}
 
+	// Hash data
+	messageHash := sha256.Sum256(payloadBytes)
+
+	// Sign data
+	sign, err := ecdsa.SignASN1(rand.Reader, privateKey, messageHash[:])
+	if err != nil {
+		return errors.Wrap(err, "failed to sign data")
+	}
+
+	var signedData string
+
 	// Encode signed data
 	switch s.Encoding {
 	case SignatureEncodingBase64:
-		signedData = base64.StdEncoding.EncodeToString([]byte(signedData))
+		signedData = base64.StdEncoding.EncodeToString(sign)
 	case SignatureEncodingHex:
-		signedData = hex.EncodeToString([]byte(signedData))
+		signedData = hex.EncodeToString(sign)
 	default:
 		return fmt.Errorf("unsupported signature encoding: %s", s.Encoding)
 	}
@@ -109,51 +124,51 @@ func (s *Signature) Sign(privateKey crypto.PrivateKey) error {
 	return nil
 }
 
-func (s *Signature) Verify(publicKey crypto.PublicKey) error {
+func (s *Signature) Verify(payload PayloadSection, publicKey *ecdsa.PublicKey) (bool, error) {
 	var decoded []byte
 
-	// Decode signed data
+	if publicKey == nil {
+		return false, errors.New("public key is required")
+	}
+
+	// Decode the signature
 	switch s.Encoding {
 	case SignatureEncodingBase64:
-		_, err := base64.StdEncoding.Decode(decoded, []byte(s.Data))
+		decodedString, err := base64.StdEncoding.DecodeString(s.Data)
 		if err != nil {
-			return err
+			return false, errors.Wrap(err, "failed to decode base64 data")
 		}
+
+		decoded = decodedString
 	case SignatureEncodingHex:
-		_, err := hex.Decode(decoded, []byte(s.Data))
+		decodedString, err := hex.DecodeString(s.Data)
 		if err != nil {
-			return err
+			return false, errors.Wrap(err, "failed to decode hex data")
 		}
+
+		decoded = decodedString
 	default:
-		return fmt.Errorf("unsupported signature encoding: %s", s.Encoding)
+		return false, fmt.Errorf("unsupported signature encoding: %s", s.Encoding)
 	}
 
-	// Verify signature
 	switch s.Algorithm {
 	case SignatureAlgorithmECDSAsecp192k1SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAsecp256k1SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAsecp384r1SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAbrainpool256r11SHA256:
-		// TODO
 	case SignatureAlgorithmECDSAsecp256r1SHA256:
-	// TODO
 	default:
-		return fmt.Errorf("unsupported signature algorithm: %s", s.Algorithm)
+		return false, fmt.Errorf("unsupported signature algorithm: %s", s.Algorithm)
 	}
 
-	return nil
-}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to marshal payload")
+	}
 
-func signECDSAsecp192k1SHA256(privateKey *ecdsa.PrivateKey, data []byte) (r, s *big.Int, err error) {
-	hash := sha256.Sum256(data)
-	r, s, err = ecdsa.Sign(rand.Reader, privateKey, hash[:])
-	return
-}
+	// Hash the payload to compare with the signature
+	messageHash := sha256.Sum256(payloadBytes)
 
-func verifyECDSAsecp192k1SHA256(publicKey *ecdsa.PublicKey, data []byte, r, s *big.Int) bool {
-	hash := sha256.Sum256(data)
-	return ecdsa.Verify(publicKey, hash[:], r, s)
+	// Verify signature
+	return ecdsa.VerifyASN1(publicKey, messageHash[:], decoded), nil
 }

@@ -1,7 +1,9 @@
 package ocmf_go
 
 import (
-	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -168,8 +170,9 @@ func (s *signatureTestSuite) TestSign() {
 	tests := []struct {
 		name       string
 		signature  Signature
-		privateKey crypto.PrivateKey
-		publicKey  crypto.PublicKey
+		payload    PayloadSection
+		privateKey *ecdsa.PrivateKey
+		publicKey  *ecdsa.PublicKey
 		error      bool
 	}{
 		{
@@ -184,33 +187,62 @@ func (s *signatureTestSuite) TestSign() {
 		{
 			name: "Invalid private key",
 		},
+		{
+			name: "Private key is nil",
+		},
 	}
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			err := tt.signature.Sign(tt.privateKey)
+			err := tt.signature.Sign(tt.payload, tt.privateKey)
 			if tt.error {
 				s.Error(err)
 			} else {
 				s.NoError(err)
 			}
 
-			err = tt.signature.Verify(tt.publicKey)
+			valid, err := tt.signature.Verify(tt.payload, tt.publicKey)
 			if tt.error {
 				s.Error(err)
+				s.False(valid)
 			} else {
 				s.NoError(err)
+				s.True(valid)
 			}
 		})
 	}
 }
 
+func (s *signatureTestSuite) TestVerify_valid() {
+	signature := &Signature{
+		Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
+		Encoding:  SignatureEncodingHex,
+		MimeType:  SignatureMimeTypeDer,
+	}
+	payload := PayloadSection{}
+
+	// Generate private and public ECDSA keys
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	err = signature.Sign(payload, privateKey)
+	s.Require().NoError(err)
+
+	publicKey := &privateKey.PublicKey
+	valid, err := signature.Verify(payload, publicKey)
+	s.Require().NoError(err)
+	s.True(valid)
+}
+
 func (s *signatureTestSuite) TestVerify() {
 	tests := []struct {
-		name      string
-		signature Signature
-		publicKey crypto.PublicKey
-		error     bool
+		name          string
+		payload       PayloadSection
+		signature     Signature
+		publicKey     *ecdsa.PublicKey
+		expectedValid bool
+		error         bool
 	}{
 		{
 			name: "Valid signature",
@@ -228,11 +260,12 @@ func (s *signatureTestSuite) TestVerify() {
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			err := tt.signature.Verify(tt.publicKey)
+			valid, err := tt.signature.Verify(tt.payload, tt.publicKey)
 			if tt.error {
 				s.Error(err)
 			} else {
 				s.NoError(err)
+				s.Equal(tt.expectedValid, valid)
 			}
 		})
 	}
