@@ -1,38 +1,20 @@
 package ocmf_go
 
 import (
-	"crypto"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 
 	"github.com/samber/lo"
 )
 
-type BuilderOption func(*Builder)
-
-func WithSignatureAlgorithm(algorithm SignatureAlgorithm) BuilderOption {
-	return func(b *Builder) {
-		if isValidSignatureAlgorithm(algorithm) {
-			b.signature.Algorithm = algorithm
-		}
-	}
-}
-
-func WithSignatureEncoding(encoding SignatureEncoding) BuilderOption {
-	return func(b *Builder) {
-		if isValidSignatureEncoding(encoding) {
-			b.signature.Encoding = encoding
-		}
-	}
-}
-
 type Builder struct {
 	payload    PayloadSection
 	signature  Signature
-	privateKey crypto.PrivateKey
+	privateKey *ecdsa.PrivateKey
 }
 
-func NewBuilder(privateKey crypto.PrivateKey, opts ...BuilderOption) *Builder {
+func NewBuilder(privateKey *ecdsa.PrivateKey, opts ...BuilderOption) *Builder {
 	builder := &Builder{
 		payload: PayloadSection{
 			FormatVersion: OcmfVersion,
@@ -130,11 +112,10 @@ func (b *Builder) AddLossCompensation(lossCompensation LossCompensation) *Builde
 	return b
 }
 
-func (b *Builder) ClearPayloadSection() *Builder {
+func (b *Builder) ClearPayloadSection() {
 	b.payload = PayloadSection{
 		FormatVersion: OcmfVersion,
 	}
-	return b
 }
 
 func (b *Builder) Build() (*string, error) {
@@ -145,7 +126,7 @@ func (b *Builder) Build() (*string, error) {
 	}
 
 	// Sign payload with private key
-	err = b.signature.Sign(b.privateKey)
+	err = b.signature.Sign(b.payload, b.privateKey)
 	if err != nil {
 		return nil, err
 	}
