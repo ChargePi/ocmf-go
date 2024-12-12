@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,8 +106,6 @@ type signatureTestSuite struct {
 	suite.Suite
 }
 
-func (s *signatureTestSuite) SetupTest() {}
-
 func (s *signatureTestSuite) TestValidate() {
 	tests := []struct {
 		name      string
@@ -166,54 +165,7 @@ func (s *signatureTestSuite) TestValidate() {
 	}
 }
 
-func (s *signatureTestSuite) TestSign() {
-	tests := []struct {
-		name       string
-		signature  Signature
-		payload    PayloadSection
-		privateKey *ecdsa.PrivateKey
-		publicKey  *ecdsa.PublicKey
-		error      bool
-	}{
-		{
-			name: "Valid signature",
-		},
-		{
-			name: "Invalid algorithm",
-		},
-		{
-			name: "Invalid encoding",
-		},
-		{
-			name: "Invalid private key",
-		},
-		{
-			name: "Private key is nil",
-		},
-	}
-
-	for _, tt := range tests {
-		s.T().Run(tt.name, func(t *testing.T) {
-			err := tt.signature.Sign(tt.payload, tt.privateKey)
-			if tt.error {
-				s.Error(err)
-			} else {
-				s.NoError(err)
-			}
-
-			valid, err := tt.signature.Verify(tt.payload, tt.publicKey)
-			if tt.error {
-				s.Error(err)
-				s.False(valid)
-			} else {
-				s.NoError(err)
-				s.True(valid)
-			}
-		})
-	}
-}
-
-func (s *signatureTestSuite) TestVerify_valid() {
+func (s *signatureTestSuite) TestSignature_valid() {
 	signature := &Signature{
 		Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
 		Encoding:  SignatureEncodingHex,
@@ -235,40 +187,89 @@ func (s *signatureTestSuite) TestVerify_valid() {
 	s.True(valid)
 }
 
-func (s *signatureTestSuite) TestVerify() {
-	tests := []struct {
-		name          string
-		payload       PayloadSection
-		signature     Signature
-		publicKey     *ecdsa.PublicKey
-		expectedValid bool
-		error         bool
-	}{
-		{
-			name: "Valid signature",
-		},
-		{
-			name: "Empty data",
-		},
-		{
-			name: "Wrong private key",
-		},
-		{
-			name: "Tampered data",
-		},
+func (s *signatureTestSuite) TestSignature_invalid_signature() {
+	signature := &Signature{
+		Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
+		Encoding:  SignatureEncodingHex,
+		MimeType:  SignatureMimeTypeDer,
+	}
+	payload := PayloadSection{}
+
+	// Generate private and public ECDSA keys
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	err = signature.Sign(payload, privateKey)
+	s.Require().NoError(err)
+
+	// Tamper with the signature
+	signature.Data = hex.EncodeToString([]byte("IhaveBeenTampered"))
+
+	publicKey := &privateKey.PublicKey
+	valid, err := signature.Verify(payload, publicKey)
+	s.NoError(err)
+	s.False(valid)
+}
+
+func (s *signatureTestSuite) TestSignature_invalid_public_key() {
+	signature := &Signature{
+		Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
+		Encoding:  SignatureEncodingHex,
+		MimeType:  SignatureMimeTypeDer,
+	}
+	payload := PayloadSection{}
+
+	// Generate private and public ECDSA keys
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	key2, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	err = signature.Sign(payload, privateKey)
+	s.Require().NoError(err)
+
+	publicKey := &key2.PublicKey
+	valid, err := signature.Verify(payload, publicKey)
+	s.NoError(err)
+	s.False(valid)
+}
+
+func (s *signatureTestSuite) TestSignature_tampered_payload() {
+	signature := &Signature{
+		Algorithm: SignatureAlgorithmECDSAsecp256r1SHA256,
+		Encoding:  SignatureEncodingHex,
+		MimeType:  SignatureMimeTypeDer,
+	}
+	payload := PayloadSection{
+		FormatVersion: OcmfVersion,
+		MeterVendor:   "ExampleMeterVendor",
+		MeterModel:    "ExampleMeterModel",
+		MeterSerial:   "ExampleSerial",
+		MeterFirmware: "0.0.1",
 	}
 
-	for _, tt := range tests {
-		s.T().Run(tt.name, func(t *testing.T) {
-			valid, err := tt.signature.Verify(tt.payload, tt.publicKey)
-			if tt.error {
-				s.Error(err)
-			} else {
-				s.NoError(err)
-				s.Equal(tt.expectedValid, valid)
-			}
-		})
+	// Generate private and public ECDSA keys
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	err = signature.Sign(payload, privateKey)
+	s.Require().NoError(err)
+
+	publicKey := &privateKey.PublicKey
+	tamperedPayload := PayloadSection{
+		FormatVersion: OcmfVersion,
+		MeterVendor:   "ExampleeMeterVendor",
+		MeterModel:    "ExampleMeterModel",
+		MeterSerial:   "ExampleSerial",
+		MeterFirmware: "0.0.1",
 	}
+	valid, err := signature.Verify(tamperedPayload, publicKey)
+	s.NoError(err)
+	s.False(valid)
 }
 
 func TestSignature(t *testing.T) {
