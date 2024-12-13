@@ -39,7 +39,7 @@ func (s *builderTestSuite) TestBuilder_Valid() {
 		WithIdentificationStatus(true).
 		WithIdentificationType(string(RfidNone)).
 		AddReading(Reading{
-			Time:         "2018-07-24T13:22:04,000+0200",
+			Time:         "2018-07-24T13:22:04,000+0200 S",
 			ReadingValue: 123,
 			ReadingUnit:  string(UnitskWh),
 			Status:       string(MeterOk),
@@ -50,7 +50,7 @@ func (s *builderTestSuite) TestBuilder_Valid() {
 	s.Equal(true, builder.payload.IdentificationStatus)
 	s.Equal(string(RfidNone), builder.payload.IdentificationType)
 	s.Len(builder.payload.Readings, 1)
-	s.Equal("2018-07-24T13:22:04,000+0200", builder.payload.Readings[0].Time)
+	s.Equal("2018-07-24T13:22:04,000+0200 S", builder.payload.Readings[0].Time)
 	s.Equal(float64(123), builder.payload.Readings[0].ReadingValue)
 	s.Equal(string(UnitskWh), builder.payload.Readings[0].ReadingUnit)
 	s.Equal(string(MeterOk), builder.payload.Readings[0].Status)
