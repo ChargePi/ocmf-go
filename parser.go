@@ -52,7 +52,7 @@ func (p *Parser) GetPayload() (*PayloadSection, error) {
 	// Validate the payload if automatic validation is enabled
 	if p.opts.withAutomaticValidation {
 		if err := p.payload.Validate(); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "payload validation failed")
 		}
 	}
 
@@ -102,17 +102,17 @@ func parseOcmfMessageFromString(data string) (*PayloadSection, *Signature, error
 		return nil, nil, ErrInvalidFormat
 	}
 
-	payloadSection := &PayloadSection{}
-	err := json.Unmarshal([]byte(splitData[0]), payloadSection)
+	payloadSection := PayloadSection{}
+	err := json.Unmarshal([]byte(splitData[0]), &payloadSection)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to unmarshal payload")
 	}
 
-	signature := &Signature{}
-	err = json.Unmarshal([]byte(splitData[1]), signature)
+	signature := Signature{}
+	err = json.Unmarshal([]byte(splitData[1]), &signature)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to unmarshal signature")
 	}
 
-	return payloadSection, signature, nil
+	return &payloadSection, &signature, nil
 }
