@@ -200,7 +200,7 @@ type PayloadSection struct {
 	MeterSerial   string `json:"MS" validate:"required"`
 	MeterFirmware string `json:"MF,omitempty"`
 	// User assignment
-	IdentificationStatus bool     `json:"IS" validate:"required"`
+	IdentificationStatus bool     `json:"IS"`
 	IdentificationLevel  string   `json:"IL,omitempty" validate:"omitempty,userAssignmentState"`
 	IdentificationFlags  []string `json:"IF" validate:"omitempty,max=4"`
 	IdentificationType   string   `json:"IT" validate:"required,rfidState"`
@@ -221,22 +221,22 @@ func (p *PayloadSection) Validate() error {
 }
 
 type LossCompensation struct {
-	Naming              string `json:"LN"`
-	Identification      int    `json:"LI"`
-	CableResistance     int    `json:"LR"`
-	CableResistanceUnit int    `json:"LU"`
+	Naming              string  `json:"LN"`
+	Identification      int     `json:"LI"`
+	CableResistance     float64 `json:"LR"`
+	CableResistanceUnit string  `json:"LU"`
 }
 
 type Reading struct {
-	Time              string `json:"TM" validate:"required,iso8601"`
-	Transaction       string `json:"TX,omitempty" validate:"omitempty,oneof=B C X E L R A P S T"`
-	ReadingValue      int    `json:"RV" validate:"required"`
-	ReadingIdentifier string `json:"RI,omitempty"`
-	ReadingUnit       string `json:"RU" validate:"required,unit"`
-	ReadingType       string `json:"RT,omitempty" validate:"omitempty,currentType"`
-	CumulatedLoss     int    `json:"CL,omitempty"`
-	ErrorFlags        string `json:"EF,omitempty" validate:"omitempty,oneof=E t"`
-	Status            string `json:"ST" validate:"required,meterError"`
+	Time              string  `json:"TM" validate:"required,iso8601"`
+	Transaction       string  `json:"TX,omitempty" validate:"omitempty,oneof=B C X E L R A P S T"`
+	ReadingValue      float64 `json:"RV" validate:"required"`
+	ReadingIdentifier string  `json:"RI,omitempty"`
+	ReadingUnit       string  `json:"RU" validate:"required,unit"`
+	ReadingType       string  `json:"RT,omitempty" validate:"omitempty,currentType"`
+	CumulatedLoss     float64 `json:"CL,omitempty"`
+	ErrorFlags        string  `json:"EF,omitempty" validate:"omitempty,oneof=E t"`
+	Status            string  `json:"ST" validate:"required,meterError"`
 }
 
 func (r *Reading) Validate() error {

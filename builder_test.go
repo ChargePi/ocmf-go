@@ -57,7 +57,7 @@ func (s *builderTestSuite) TestBuilder_Valid() {
 	s.Equal(string(RfidNone), builder.payload.IdentificationType)
 	s.Len(builder.payload.Readings, 1)
 	s.Equal("2018-07-24T13:22:04,000+0200", builder.payload.Readings[0].Time)
-	s.Equal(123, builder.payload.Readings[0].ReadingValue)
+	s.Equal(float64(123), builder.payload.Readings[0].ReadingValue)
 	s.Equal(string(UnitskWh), builder.payload.Readings[0].ReadingUnit)
 	s.Equal(string(MeterOk), builder.payload.Readings[0].Status)
 

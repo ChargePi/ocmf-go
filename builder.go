@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 )
 
@@ -122,24 +123,24 @@ func (b *Builder) Build() (*string, error) {
 	// Validate payload
 	err := b.payload.Validate()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "payload validation failed")
 	}
 
 	// Sign payload with private key
 	err = b.signature.Sign(b.payload, b.privateKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to sign message")
 	}
 
 	payload, err := json.Marshal(b.payload)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal payload")
 	}
 
 	signature, err := json.Marshal(b.signature)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal signature")
 	}
 
-	return lo.ToPtr(fmt.Sprintf("OCMF|%v|%v", payload, signature)), nil
+	return lo.ToPtr(fmt.Sprintf("OCMF|%s|%s", payload, signature)), nil
 }

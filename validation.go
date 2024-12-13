@@ -71,7 +71,7 @@ func currentTypeValidator(fl validator.FieldLevel) bool {
 	return isValidCurrentType(CurrentType(fl.Field().String()))
 }
 
-var iso8601WithMillisRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2},\d{3}[+-]\d{4}$`)
+var iso8601WithMillisRegex = regexp.MustCompile(`^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:Z|-0[1-9]|-1\d|-2[0-3]|-00:?(?:0[1-9]|[1-5]\d)|\+[01]\d|\+2[0-3])(?:|:?[0-5]\d)$`)
 
 func iso8601WithMillisValidator(fl validator.FieldLevel) bool {
 	return iso8601WithMillisRegex.MatchString(fl.Field().String())
