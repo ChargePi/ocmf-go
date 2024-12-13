@@ -2,51 +2,45 @@ package ocmf_go
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 )
-
-type Opt func(*Parser)
-
-func WithAutomaticValidation() Opt {
-	return func(p *Parser) {
-		p.withAutomaticValidation = true
-	}
-}
 
 var (
 	ErrInvalidFormat = errors.New("invalid OCMF message format")
 )
 
 type Parser struct {
-	payload                 *PayloadSection
-	signature               *Signature
-	withAutomaticValidation bool
-	err                     error
+	payload   *PayloadSection
+	signature *Signature
+	opts      ParserOpts
+	err       error
 }
 
 func NewParser(opts ...Opt) *Parser {
-	parser := &Parser{}
-
+	defaults := defaultOpts()
 	// Apply opts
 	for _, opt := range opts {
-		opt(parser)
-	}
-
-	return parser
-}
-
-// Returns a new Parser instance with the payload and signature fields set
-func (p *Parser) ParseOcmfMessageFromString(data string) *Parser {
-	payloadSection, signature, err := parseOcmfMessageFromString(data)
-	if err != nil {
-		return &Parser{err: err, withAutomaticValidation: p.withAutomaticValidation}
+		opt(&defaults)
 	}
 
 	return &Parser{
-		payload:                 payloadSection,
-		signature:               signature,
-		withAutomaticValidation: p.withAutomaticValidation,
+		opts: defaults,
+	}
+}
+
+// ParseOcmfMessageFromString Returns a new Parser instance with the payload and signature fields set
+func (p *Parser) ParseOcmfMessageFromString(data string) *Parser {
+	payloadSection, signature, err := parseOcmfMessageFromString(data)
+	if err != nil {
+		return &Parser{err: err, opts: p.opts}
+	}
+
+	return &Parser{
+		payload:   payloadSection,
+		signature: signature,
+		opts:      p.opts,
 	}
 }
 
@@ -56,7 +50,7 @@ func (p *Parser) GetPayload() (*PayloadSection, error) {
 	}
 
 	// Validate the payload if automatic validation is enabled
-	if p.withAutomaticValidation {
+	if p.opts.withAutomaticValidation {
 		if err := p.payload.Validate(); err != nil {
 			return nil, err
 		}
@@ -71,9 +65,25 @@ func (p *Parser) GetSignature() (*Signature, error) {
 	}
 
 	// Validate the signature if automatic validation is enabled
-	if p.withAutomaticValidation {
+	if p.opts.withAutomaticValidation {
 		if err := p.signature.Validate(); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "signature validation failed")
+		}
+	}
+
+	if p.opts.withAutomaticSignatureVerification {
+		if p.payload == nil {
+			return nil, errors.New("payload is empty")
+		}
+
+		valid, err := p.signature.Verify(*p.payload, p.opts.publicKey)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to verify signature")
+		}
+
+		// Even if the signature is valid, we still return an error if the verification failed
+		if !valid {
+			return p.signature, errors.New("verification failed")
 		}
 	}
 
