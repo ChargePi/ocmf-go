@@ -13,12 +13,6 @@ type builderTestSuite struct {
 	suite.Suite
 }
 
-func (s *builderTestSuite) SetupTest() {
-}
-
-func (s *builderTestSuite) TearDownSuite() {
-}
-
 func (s *builderTestSuite) TestNewBuilder() {
 	tests := []struct {
 		name string
