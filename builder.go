@@ -68,6 +68,21 @@ func (b *Builder) WithMeterSerial(serial string) *Builder {
 	return b
 }
 
+func (b *Builder) WithMeterModel(model string) *Builder {
+	b.payload.MeterModel = model
+	return b
+}
+
+func (b *Builder) WithMeterVendor(vendor string) *Builder {
+	b.payload.MeterVendor = vendor
+	return b
+}
+
+func (b *Builder) WithMeterFirmware(firmware string) *Builder {
+	b.payload.MeterFirmware = firmware
+	return b
+}
+
 func (b *Builder) WithIdentificationStatus(status bool) *Builder {
 	b.payload.IdentificationStatus = status
 	return b
