@@ -50,7 +50,7 @@ func (s *parserOptsTestSuite) TestParserOptions() {
 			},
 			expectedOptions: ParserOpts{
 				withAutomaticValidation:            false,
-				withAutomaticSignatureVerification: false,
+				withAutomaticSignatureVerification: true,
 				publicKey:                          nil,
 			},
 		},

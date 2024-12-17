@@ -1,6 +1,9 @@
 package ocmf_go
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"strings"
 	"testing"
 
@@ -39,19 +42,47 @@ func (s *parserTestSuite) TestParseOcmfMessageFromString_invalid_format() {
 	s.Nil(signature)
 }
 
-func (s *parserTestSuite) TestGetPayload() {
-	tests := []struct {
-		name string
-	}{}
+func (s *parserTestSuite) TestGetPayload_valid() {
+	parser := NewParser().ParseOcmfMessageFromString(examplePayload)
 
-	for _, tt := range tests {
-		s.T().Run(tt.name, func(t *testing.T) {
+	payload, err := parser.GetPayload()
+	s.NoError(err)
+	s.NotNil(payload)
 
-		})
-	}
+	s.Equal("EEM-350-D-MCB", payload.MeterModel)
+	s.Equal("BQ27400330016", payload.MeterSerial)
+}
+
+func (s *parserTestSuite) TestGetPayload_unparsable() {
+	malformedPayload := "OCMF|{}|{"
+	parser := NewParser().ParseOcmfMessageFromString(malformedPayload)
+
+	payload, err := parser.GetPayload()
+	s.ErrorContains(err, "failed to unmarshal signature")
+	s.Nil(payload)
 }
 
 func (s *parserTestSuite) TestGetSignature_valid() {
+	// Generate private and public ECDSA keys
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	builder := NewBuilder(privateKey).
+		WithPagination("1").
+		WithMeterSerial("exampleSerial123").
+		WithIdentificationStatus(true).
+		WithIdentificationType(string(RfidNone)).
+		AddReading(Reading{
+			Time:         "2018-07-24T13:22:04,000+0200 S",
+			ReadingValue: 1.0,
+			ReadingUnit:  string(UnitskWh),
+			Status:       string(MeterOk),
+		})
+
+	message, err := builder.Build()
+	s.Require().NoError(err)
+
 	tests := []struct {
 		name              string
 		parserOpts        []Opt
@@ -59,43 +90,106 @@ func (s *parserTestSuite) TestGetSignature_valid() {
 		expectedSignature *Signature
 	}{
 		{
-			name: "With automatic signature verification",
+			name:              "No validation",
+			parserOpts:        []Opt{},
+			data:              *message,
+			expectedSignature: &builder.signature,
 		},
 		{
-			name: "With automatic signature validation",
+			name: "With automatic signature verification",
+			parserOpts: []Opt{
+				WithAutomaticSignatureVerification(&privateKey.PublicKey),
+			},
+			data:              *message,
+			expectedSignature: &builder.signature,
+		},
+		{
+			name: "With automatic payload validation",
+			parserOpts: []Opt{
+				WithAutomaticValidation(),
+			},
+			data:              *message,
+			expectedSignature: &builder.signature,
 		},
 	}
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
+			parser := NewParser(tt.parserOpts...).ParseOcmfMessageFromString(tt.data)
 
+			signature, err := parser.GetSignature()
+			s.NoError(err)
+			s.NotNil(signature)
+			s.Equal(*tt.expectedSignature, *signature)
 		})
 	}
 }
 
 func (s *parserTestSuite) TestGetSignature_invalid() {
+	// Generate private and public ECDSA keys
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
+	builder := NewBuilder(privateKey).
+		WithPagination("1").
+		WithMeterSerial("exampleSerial123").
+		WithIdentificationStatus(true).
+		WithIdentificationType(string(RfidNone)).
+		AddReading(Reading{
+			Time:         "2018-07-24T13:22:04,000+0200 S",
+			ReadingValue: 1.0,
+			ReadingUnit:  string(UnitskWh),
+			Status:       string(MeterOk),
+		})
+
+	message, err := builder.Build()
+	s.Require().NoError(err)
+
+	privateKey2, err := ecdsa.GenerateKey(curve, rand.Reader)
+	s.Require().NoError(err)
+
 	tests := []struct {
-		name              string
-		parserOpts        []Opt
-		data              string
-		expectedSignature *Signature
-		error             string
+		name       string
+		parserOpts []Opt
+		data       string
+		error      string
 	}{
-		{},
+		{
+			name: "Signature validation failed",
+			parserOpts: []Opt{
+				WithAutomaticSignatureVerification(&privateKey2.PublicKey),
+			},
+			data:  *message,
+			error: "verification failed",
+		}, {
+			name: "Nil public key",
+			parserOpts: []Opt{
+				WithAutomaticSignatureVerification(nil),
+			},
+			data:  *message,
+			error: "unable to verify signature",
+		},
+		{
+			name: "Payload empty",
+			parserOpts: []Opt{
+				WithAutomaticSignatureVerification(&privateKey.PublicKey),
+			},
+			data:  *message,
+			error: "payload is empty",
+		},
 	}
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			parser := NewParser(tt.parserOpts...)
+			parser := NewParser(tt.parserOpts...).ParseOcmfMessageFromString(tt.data)
 
-			signature, err := parser.GetSignature()
-			if tt.error != "" {
-				s.ErrorContains(err, tt.error)
-			} else {
-				s.NoError(err)
-				s.NotNil(signature)
-				s.Equal(*tt.expectedSignature, *signature)
+			if tt.name == "Payload empty" {
+				parser.payload = nil
 			}
+
+			_, err := parser.GetSignature()
+			s.ErrorContains(err, tt.error)
 		})
 	}
 }

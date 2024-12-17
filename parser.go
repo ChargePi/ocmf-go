@@ -8,7 +8,9 @@ import (
 )
 
 var (
-	ErrInvalidFormat = errors.New("invalid OCMF message format")
+	ErrInvalidFormat       = errors.New("invalid OCMF message format")
+	ErrVerificationFailure = errors.New("verification failed")
+	ErrPayloadEmpty        = errors.New("payload is empty")
 )
 
 type Parser struct {
@@ -73,7 +75,7 @@ func (p *Parser) GetSignature() (*Signature, error) {
 
 	if p.opts.withAutomaticSignatureVerification {
 		if p.payload == nil {
-			return nil, errors.New("payload is empty")
+			return nil, ErrPayloadEmpty
 		}
 
 		valid, err := p.signature.Verify(*p.payload, p.opts.publicKey)
@@ -83,7 +85,7 @@ func (p *Parser) GetSignature() (*Signature, error) {
 
 		// Even if the signature is valid, we still return an error if the verification failed
 		if !valid {
-			return p.signature, errors.New("verification failed")
+			return p.signature, ErrVerificationFailure
 		}
 	}
 
