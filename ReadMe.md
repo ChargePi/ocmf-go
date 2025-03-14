@@ -1,5 +1,7 @@
 # OCMF-go
 
+![coverage](https://raw.githubusercontent.com/ChargePi/ocmf-go/badges/.badges/main/coverage.svg)
+
 OCMF-go is an implementation of the Open Charge Metering Format (OCMF) in Go. It provides a simple library for
 generating and parsing OCMF messages. The provided message builder generates OCMF-compatible messages and signs the data
 with the provided private key, desired algorithm and encoding, so you don't have to.
