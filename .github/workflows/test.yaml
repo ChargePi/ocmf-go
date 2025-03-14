@@ -32,8 +32,28 @@ jobs:
         with:
           go-version: "^1.21.1"
 
-      - name: Install dependencies
-        run: go mod download
+      - name: Install dependencies and run tests
+        run: |
+          go mod download
+          go test -v ./... -coverpkg=./... -short -coverprofile=unit_coverage.out
 
-      - name: Test
-        run: go test --short -v ./...
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: unit_coverage.out
+
+  code_coverage:
+    name: "Code coverage report"
+    if: github.event_name == 'pull_request' # Do not run when workflow is triggered by push to main branch
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      actions: read  # to download code coverage results from "test" job
+      pull-requests: write # write permission needed to comment on PR
+    steps:
+      - uses: fgrosse/go-coverage-report@v1.1.1
+        with:
+          coverage-artifact-name: "code-coverage" # can be omitted if you used this default value
+          coverage-file-name: unit_coverage.out
