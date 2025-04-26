@@ -9,15 +9,6 @@ updates:
     reviewers:
       - "xBlaz3kx"
 
-  - package-ecosystem: "docker"
-    directory: "/build/package/"
-    schedule:
-      interval: "weekly"
-    assignees:
-      - "xBlaz3kx"
-    reviewers:
-      - "xBlaz3kx"
-
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
